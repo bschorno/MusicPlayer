@@ -3,19 +3,35 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:MusicPlayer"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:local="clr-namespace:MusicPlayer"
+        xmlns:commands="clr-namespace:MusicPlayer.Commands"
         xmlns:converters="clr-namespace:MusicPlayer.Converters"
+        xmlns:models="clr-namespace:MusicPlayer.Models"
         mc:Ignorable="d"
+        WindowStartupLocation="CenterScreen"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         Background="{DynamicResource MaterialDesignPaper}"
         TextElement.FontWeight="ExtraLight"
         TextElement.FontSize="14"
         FontFamily="pack://application:,,,/MaterialDesignThemes.Wpf;component/Resources/Roboto/#Roboto"
-        Title="Music Player" Height="800" Width="600">
+        Title="Music Player" Height="800" Width="600"
+        Closing="OnWindowClosing">
     <Window.Resources>
+
         <converters:TimeConverter x:Key="TimeConverter"/>
+
     </Window.Resources>
+    <Window.CommandBindings>
+
+        <CommandBinding Command="commands:PlayerCommand.PlayPause"    Executed="OnPlay"         CanExecute="CanExecutePlay"/>
+        <CommandBinding Command="commands:PlayerCommand.PlayNew"      Executed="OnPlaylistPlay"/>
+        <CommandBinding Command="commands:PlayerCommand.SkipNext"     Executed="OnSkipNext"     CanExecute="CanExecuteSkipNext"/>
+        <CommandBinding Command="commands:PlayerCommand.SkipPrevious" Executed="OnSkipPrevious" CanExecute="CanExecuteSkipPrevious"/>
+        <CommandBinding Command="commands:PlayerCommand.SavePlaylist" Executed="OnPlaylistSave"/>
+        <CommandBinding Command="commands:PlayerCommand.LoadPlaylist" Executed="OnPlaylistLoad"/>
+        
+    </Window.CommandBindings>
     <Grid>
         
         <Grid.RowDefinitions>
@@ -24,17 +40,78 @@
             <RowDefinition Height="100"/>
         </Grid.RowDefinitions>
 
+        <Grid Grid.Row="0">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="100"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel 
+                Grid.Column="0"
+                Orientation="Horizontal"
+                VerticalAlignment="Top"
+                HorizontalAlignment="Left"
+                Margin="2.5">
+
+                <TextBlock
+                    Style="{StaticResource MaterialDesignDisplay1TextBlock}"
+                    Text="{Binding Playlist.Name}"
+                    Margin="2.5"/>
+
+            </StackPanel>
+            
+            <StackPanel 
+                Grid.Column="1"
+                Orientation="Horizontal"
+                VerticalAlignment="Top"
+                HorizontalAlignment="Right"
+                Margin="2.5">
+
+                <Button
+                    Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
+                    Command="commands:PlayerCommand.SavePlaylist"
+                    ToolTip="Save playlist"
+                    Width="24"
+                    Height="24"
+                    Margin="2.5">
+                    <materialDesign:PackIcon 
+                        Kind="FolderDownload" 
+                        Height="16" 
+                        Width="16" />
+                </Button>
+
+                <Button
+                    Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
+                    Command="commands:PlayerCommand.LoadPlaylist"
+                    ToolTip="Load playlist"
+                    Width="24"
+                    Height="24"
+                    Margin="2.5">
+                    <materialDesign:PackIcon 
+                        Kind="FolderUpload" 
+                        Height="16" 
+                        Width="16" />
+                </Button>
+
+            </StackPanel>
+            
+        </Grid>
+        
         <Grid Grid.Row="1">
 
             <ScrollViewer
                 VerticalScrollBarVisibility="Auto">
 
-                <ItemsControl
-                    ItemsSource="{Binding Songs}">
+                <ListView
+                    ItemsSource="{Binding Playlist.Songs, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}"
+                    AllowDrop="True"
+                    HorizontalContentAlignment="Stretch"
+                    Drop="OnPlaylistDrop">
                 
-                    <ItemsControl.ItemTemplate>
+                    <ListView.ItemTemplate>
                     
-                        <DataTemplate>
+                        <DataTemplate DataType="{x:Type models:SongModel}">
 
                             <Grid>
 
@@ -46,6 +123,7 @@
 
                                 <Button 
                                     Style="{StaticResource MaterialDesignFloatingActionMiniButton}" 
+                                    Command="commands:PlayerCommand.PlayNew"
                                     Grid.Column="0"
                                     ToolTip="Play"
                                     Width="24"
@@ -73,15 +151,15 @@
                                 <Label
                                     Grid.Column="2"
                                     VerticalAlignment="Center"
-                                    Content="{Binding Seconds, Converter={StaticResource TimeConverter}}"/>
+                                    Content="{Binding AudioReader.TotalTime, Converter={StaticResource TimeConverter}}"/>
 
                             </Grid>
                         
                         </DataTemplate>
                     
-                    </ItemsControl.ItemTemplate>
+                    </ListView.ItemTemplate>
                 
-                </ItemsControl>
+                </ListView>
                 
             </ScrollViewer>
 
@@ -93,6 +171,21 @@
                 <ColumnDefinition Width="200"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
+
+            <StackPanel
+                Grid.Column="0"
+                Orientation="Vertical">
+
+                <TextBlock 
+                    FontWeight="Bold"
+                    Text="{Binding CurrentSong.Title}"
+                    Margin="10, 5"/>
+
+                <TextBlock 
+                    Text="{Binding CurrentSong.Interpreter}"
+                    Margin="10, 5"/>
+
+            </StackPanel>
             
             <StackPanel 
                 Grid.Column="1" 
@@ -104,6 +197,7 @@
 
                     <Button 
                         Style="{StaticResource MaterialDesignFloatingActionMiniButton}" 
+                        Command="commands:PlayerCommand.SkipPrevious"
                         ToolTip="Skip previous"
                         Margin="5">
                         <materialDesign:PackIcon 
@@ -114,6 +208,7 @@
 
                     <Button 
                         Style="{StaticResource MaterialDesignFloatingActionButton}" 
+                        Command="commands:PlayerCommand.PlayPause"
                         ToolTip="Play"
                         Margin="5">
                         <materialDesign:PackIcon 
@@ -124,6 +219,7 @@
 
                     <Button 
                         Style="{StaticResource MaterialDesignFloatingActionMiniButton}" 
+                        Command="commands:PlayerCommand.SkipNext"
                         ToolTip="Skip next"
                         Margin="5">
                         <materialDesign:PackIcon 
@@ -143,19 +239,24 @@
                     </Grid.ColumnDefinitions>
 
                     <Label 
+                        x:Name="lblCurrentTime"
                         Grid.Column="0"
                         HorizontalAlignment="Center"
-                        Content="1:24"/>
+                        Content="{Binding Playlist.CurrentSong.AudioReader.CurrentTime, Converter={StaticResource TimeConverter}, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}"/>
 
                     <Slider
+                        x:Name="sldCurrentTime"
                         Grid.Column="1"
                         VerticalAlignment="Center"
-                        Value="5"/>
+                        Value="{Binding Playlist.CurrentSong.AudioReader.CurrentTime.TotalSeconds, UpdateSourceTrigger=Explicit, Mode=OneWay}"
+                        Maximum="{Binding Playlist.CurrentSong.AudioReader.TotalTime.TotalSeconds, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}"
+                        ValueChanged="OnSliderValueChanged"/>
 
                     <Label 
+                        x:Name="lblTotalTime"
                         Grid.Column="2"
                         HorizontalAlignment="Center"
-                        Content="2:48"/>
+                        Content="{Binding Playlist.CurrentSong.AudioReader.TotalTime, Converter={StaticResource TimeConverter}, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}"/>
                     
                 </Grid>
                 
