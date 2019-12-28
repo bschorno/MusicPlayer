@@ -27,6 +27,7 @@ namespace MusicPlayer.Windows
     {
         private PlayerModel  _model;
         private Thread       _updateThread;
+        private SongModel    _songDndSource;
 
         /// <summary>
         /// Consctuctor
@@ -152,12 +153,99 @@ namespace MusicPlayer.Windows
         /// <param name="e"></param>
         private void OnPlaylistDrop(object sender, DragEventArgs e)
         {
-            string[] paths = (string[])e.Data.GetData(DataFormats.FileDrop);
-
-            foreach (string path in paths)
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                this._model.Playlist.AddSong(new SongModel(new FileInfo(path)));
+                string[] paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+                for (int i = 0; i < paths.Length; i++)
+                {
+                    this._model.Playlist.AddSong(new SongModel(new FileInfo(paths[i])));
+                }
+                e.Handled = true;
             }
+            else
+            {
+                int targetIndex = 0;
+                int sourceIndex = this._model.Playlist.Songs.IndexOf(this._songDndSource);
+                if (sender is ListView)
+                {
+                    targetIndex = this._model.Playlist.Songs.Count;
+                }
+                else if (e.Data.GetDataPresent(typeof(SongModel)))
+                {
+                    ListBoxItem listBoxItem = sender as ListBoxItem;
+                    SongModel model = listBoxItem.DataContext as SongModel;
+                    targetIndex = this._model.Playlist.Songs.IndexOf(model);
+                }
+                else
+                {
+                    return;
+                }
+                
+                if (sourceIndex == targetIndex)
+                {
+                    e.Handled = true;
+                }
+                else if (sourceIndex > targetIndex)
+                {
+                    if (sourceIndex != -1)
+                        this._model.Playlist.Songs.RemoveAt(sourceIndex);
+                    this._model.Playlist.Songs.Insert(targetIndex, (this._songDndSource));
+                    e.Handled = true;
+                }
+                else
+                {
+                    if (targetIndex + 1 > this._model.Playlist.Songs.Count)
+                        targetIndex = this._model.Playlist.Songs.Count - 1;
+                    this._model.Playlist.Songs.Insert(targetIndex + 1, (this._songDndSource));
+                    if (sourceIndex != -1)
+                        this._model.Playlist.Songs.RemoveAt(sourceIndex);
+                    e.Handled = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// On playlist item drag over
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void OnPlaylistItemDragOver(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(typeof(SongModel)) && !e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// On playlist item drag over
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void OnPlaylistItemDrop(object sender, DragEventArgs e)
+        {
+            this.OnPlaylistDrop(sender, e);
+        }
+
+        /// <summary>
+        /// On playlist item preview mouse move
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void OnPlaylistItemPreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed)
+                return;
+            ListBoxItem listboxItem = (ListBoxItem)sender;
+            if (listboxItem == null)
+                return;
+            this._songDndSource = listboxItem.DataContext as SongModel;
+            if (this._songDndSource == null)
+                return;
+            DataObject data = new DataObject();
+            data.SetData(this._songDndSource);
+            DragDropEffects effect = DragDrop.DoDragDrop(listboxItem, data, DragDropEffects.Move | DragDropEffects.Copy);
         }
 
         /// <summary>

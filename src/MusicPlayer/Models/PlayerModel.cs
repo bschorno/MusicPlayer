@@ -71,6 +71,21 @@ namespace MusicPlayer.Models
         }
 
         /// <summary>
+        /// Volume
+        /// </summary>
+        public int Volume
+        {
+            get
+            {
+                return (int)(this._outputDevice.Volume * 100);
+            }
+            set
+            {
+                this._outputDevice.Volume = value / 100f;
+            }
+        }
+
+        /// <summary>
         /// Last save path
         /// </summary>
         public string LastSavePath
@@ -110,6 +125,7 @@ namespace MusicPlayer.Models
                 this._playlist = new PlaylistModel("Playlist 1");
 
             this._outputDevice = new WaveOutEvent();
+            this._outputDevice.PlaybackStopped += new EventHandler<StoppedEventArgs>(OnPlayerStopped);
         }
 
         /// <summary>
@@ -121,7 +137,10 @@ namespace MusicPlayer.Models
                 return;
 
             if (this._outputDevice.PlaybackState != PlaybackState.Playing)
+            {
                 this._outputDevice.Play();
+                this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("PlaybackState"));
+            }
         }
 
         /// <summary>
@@ -133,7 +152,10 @@ namespace MusicPlayer.Models
                 return;
 
             if (this._outputDevice.PlaybackState == PlaybackState.Playing)
+            {
                 this._outputDevice.Pause();
+                this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("PlaybackState"));
+            }
         }
 
         /// <summary>
@@ -151,7 +173,10 @@ namespace MusicPlayer.Models
                 this._outputDevice.Init(this.CurrentSong.AudioReader);
 
                 if (state == PlaybackState.Playing)
+                {
                     this._outputDevice.Play();
+                    this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("PlaybackState"));
+                }
             }
         }
 
@@ -201,6 +226,16 @@ namespace MusicPlayer.Models
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// On player stopped
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="args"></param>
+        private void OnPlayerStopped(object sender, StoppedEventArgs args)
+        {
+            this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("PlaybackState"));
         }
     }
 }

@@ -8,6 +8,7 @@
         xmlns:commands="clr-namespace:MusicPlayer.Commands"
         xmlns:converters="clr-namespace:MusicPlayer.Converters"
         xmlns:models="clr-namespace:MusicPlayer.Models"
+        xmlns:wave="clr-namespace:NAudio.Wave;assembly=NAudio"
         mc:Ignorable="d"
         WindowStartupLocation="CenterScreen"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
@@ -104,31 +105,40 @@
                 VerticalScrollBarVisibility="Auto">
 
                 <ListView
+                    x:Name="lsvPlaylist"
                     ItemsSource="{Binding Playlist.Songs, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}"
                     AllowDrop="True"
                     HorizontalContentAlignment="Stretch"
                     Drop="OnPlaylistDrop">
+                    <ListView.ItemContainerStyle>
+                        <Style>
+                            <EventSetter Event="ListBoxItem.DragOver" Handler="OnPlaylistItemDragOver"/>
+                            <EventSetter Event="ListBoxItem.Drop" Handler="OnPlaylistItemDrop"/>
+                            <EventSetter Event="ListBoxItem.MouseMove" Handler="OnPlaylistItemPreviewMouseMove"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
                 
                     <ListView.ItemTemplate>
                     
-                        <DataTemplate DataType="{x:Type models:SongModel}">
-
+                        <DataTemplate 
+                            DataType="{x:Type models:SongModel}">
+                            
                             <Grid>
 
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="15"/>
                                     <ColumnDefinition Width="50"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="50"/>
                                 </Grid.ColumnDefinitions>
-
+                                
                                 <Button 
                                     Style="{StaticResource MaterialDesignFloatingActionMiniButton}" 
                                     Command="commands:PlayerCommand.PlayNew"
-                                    Grid.Column="0"
+                                    Grid.Column="1"
                                     ToolTip="Play"
                                     Width="24"
-                                    Height="24"
-                                    Margin="5">
+                                    Height="24">
                                     <materialDesign:PackIcon 
                                         Kind="Play" 
                                         Height="16" 
@@ -136,7 +146,7 @@
                                 </Button>
 
                                 <StackPanel
-                                    Grid.Column="1"
+                                    Grid.Column="2"
                                     Orientation="Vertical">
 
                                     <TextBlock 
@@ -149,12 +159,12 @@
                                 </StackPanel>
 
                                 <Label
-                                    Grid.Column="2"
+                                    Grid.Column="3"
                                     VerticalAlignment="Center"
                                     Content="{Binding AudioReader.TotalTime, Converter={StaticResource TimeConverter}}"/>
 
                             </Grid>
-                        
+                                
                         </DataTemplate>
                     
                     </ListView.ItemTemplate>
@@ -178,11 +188,11 @@
 
                 <TextBlock 
                     FontWeight="Bold"
-                    Text="{Binding CurrentSong.Title}"
+                    Text="{Binding Playlist.CurrentSong.Title}"
                     Margin="10, 5"/>
 
                 <TextBlock 
-                    Text="{Binding CurrentSong.Interpreter}"
+                    Text="{Binding Playlist.CurrentSong.Interpreter}"
                     Margin="10, 5"/>
 
             </StackPanel>
@@ -191,44 +201,120 @@
                 Grid.Column="1" 
                 Orientation="Vertical">
 
-                <StackPanel 
-                    Orientation="Horizontal" 
-                    HorizontalAlignment="Center">
+                <Grid>
 
-                    <Button 
-                        Style="{StaticResource MaterialDesignFloatingActionMiniButton}" 
-                        Command="commands:PlayerCommand.SkipPrevious"
-                        ToolTip="Skip previous"
-                        Margin="5">
-                        <materialDesign:PackIcon 
-                            Kind="SkipPrevious" 
-                            Height="32" 
-                            Width="32" />
-                    </Button>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="50"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
 
-                    <Button 
-                        Style="{StaticResource MaterialDesignFloatingActionButton}" 
-                        Command="commands:PlayerCommand.PlayPause"
-                        ToolTip="Play"
-                        Margin="5">
-                        <materialDesign:PackIcon 
-                            Kind="Play" 
-                            Height="48" 
-                            Width="48" />
-                    </Button>
+                    <StackPanel 
+                        Grid.Column="1"
+                        Orientation="Horizontal" 
+                        HorizontalAlignment="Center">
 
-                    <Button 
-                        Style="{StaticResource MaterialDesignFloatingActionMiniButton}" 
-                        Command="commands:PlayerCommand.SkipNext"
-                        ToolTip="Skip next"
-                        Margin="5">
-                        <materialDesign:PackIcon 
-                            Kind="SkipNext" 
-                            Height="32" 
-                            Width="32" />
-                    </Button>
+                        <Button 
+                            Style="{StaticResource MaterialDesignFloatingActionMiniButton}" 
+                            Command="commands:PlayerCommand.SkipPrevious"
+                            ToolTip="Skip previous"
+                            Margin="5">
+                            <materialDesign:PackIcon 
+                                Kind="SkipPrevious" 
+                                Height="32" 
+                                Width="32" />
+                        </Button>
 
-                </StackPanel>
+                        <Button 
+                            Style="{StaticResource MaterialDesignFloatingActionButton}" 
+                            Command="commands:PlayerCommand.PlayPause"
+                            ToolTip="Play"
+                            Margin="5">
+                            <materialDesign:PackIcon 
+                                Height="48" 
+                                Width="48">
+                                <materialDesign:PackIcon.Style>
+                                    <Style TargetType="materialDesign:PackIcon">
+                                        <Setter Property="Kind" Value="Play"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Path=PlaybackState}" Value="{x:Static wave:PlaybackState.Playing}">
+                                                <Setter Property="Kind" Value="Pause"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </materialDesign:PackIcon.Style>
+                            </materialDesign:PackIcon>
+                        </Button>
+
+                        <Button 
+                            Style="{StaticResource MaterialDesignFloatingActionMiniButton}" 
+                            Command="commands:PlayerCommand.SkipNext"
+                            ToolTip="Skip next"
+                            Margin="5">
+                            <materialDesign:PackIcon 
+                                Kind="SkipNext" 
+                                Height="32" 
+                                Width="32" />
+                        </Button>
+
+                    </StackPanel>
+
+                    <StackPanel
+                        Grid.Column="2"
+                        Orientation="Vertical"
+                        VerticalAlignment="Center">
+
+                        <materialDesign:PopupBox
+                            PlacementMode="TopAndAlignCentres">
+                            <materialDesign:PopupBox.ToggleContent>
+                                <materialDesign:PackIcon 
+                                    Height="24"
+                                    Width="24"
+                                    Foreground="{DynamicResource PrimaryHueMidBrush}">
+                                    <materialDesign:PackIcon.Style>
+                                        <Style TargetType="materialDesign:PackIcon">
+                                            <Setter Property="Kind" Value="VolumeHigh"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ElementName=sldVolume, Path=Value}" Value="0">
+                                                    <Setter Property="Kind" Value="VolumeMute"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </materialDesign:PackIcon.Style>
+                                </materialDesign:PackIcon>
+                            </materialDesign:PopupBox.ToggleContent>
+
+                            <Slider
+                                x:Name="sldVolume"
+                                TickFrequency="2"
+                                Orientation="Vertical"
+                                Value="{Binding Volume, Mode=TwoWay}"
+                                Minimum="0"
+                                Maximum="100"
+                                Height="100"
+                                Margin="5"/>
+
+                        </materialDesign:PopupBox>
+
+                        <materialDesign:PopupBox
+                            PlacementMode="TopAndAlignCentres">
+                            <materialDesign:PopupBox.ToggleContent>
+                                <materialDesign:PackIcon 
+                                    Kind="PlaylistPlay"
+                                    Height="24"
+                                    Width="24"
+                                    Foreground="{DynamicResource PrimaryHueMidBrush}">
+                                    
+                                </materialDesign:PackIcon>
+                            </materialDesign:PopupBox.ToggleContent>
+
+                            
+
+                        </materialDesign:PopupBox>
+
+                    </StackPanel>
+                    
+                </Grid>
 
                 <Grid>
 
